@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tebak Gambar Online 🧩</title>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      margin: 0;
+      color: #1e293b;
+    }
+    h1 {
+      margin-top: 40px;
+      color: #312e81;
+    }
+    .card {
+      background: #fff;
+      padding: 20px;
+      margin: 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
+    }
+    input, select {
+      padding: 10px;
+      width: 80%;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      margin: 8px 0;
+      font-size: 16px;
+    }
+    button {
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #4338ca;
+    }
+    img {
+      max-width: 100%;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      margin: 10px 0;
+    }
+    .message {
+      margin-top: 12px;
+      font-weight: bold;
+    }
+    .correct {
+      color: #16a34a;
+    }
+    .wrong {
+      color: #dc2626;
+    }
+    footer {
+      margin-top: auto;
+      padding: 20px;
+      font-size: 14px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Tebak Gambar Online</h1>
+
+  <div class="card" id="menu">
+    <button id="createRoom">Buat Room</button>
+    <button id="joinRoom">Gabung Room</button>
+  </div>
+
+  <div class="card" id="createSection" style="display:none;">
+    <h3>Buat Room</h3>
+    <button id="generateRoom">Generate Room</button>
+    <p>Kode Room: <strong id="roomCode"></strong></p>
+    <select id="category">
+      <option value="hewan">🐾 Hewan</option>
+      <option value="buah">🍎 Buah</option>
+      <option value="aktivitas">🏃 Aktivitas</option>
+    </select>
+    <button id="startGame">Mulai Game</button>
+  </div>
+
+  <div class="card" id="joinSection" style="display:none;">
+    <h3>Gabung Room</h3>
+    <input type="text" id="joinCode" placeholder="Masukkan kode room" />
+    <button id="joinNow">Gabung</button>
+  </div>
+
+  <div class="card" id="gameSection" style="display:none;">
+    <h3>Room: <span id="currentRoom"></span></h3>
+    <img id="questionImage" src="" alt="Gambar tebak" />
+    <input type="text" id="answerInput" placeholder="Tebakan kamu..." />
+    <button id="submitAnswer">Kirim</button>
+    <div class="message" id="resultMessage"></div>
+  </div>
+
+  <footer>© 2025 Tebak Gambar Online | Dykk 🩵</footer>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBykr6mb6lj83uyrkntihDWt73lV2K7aQ4",
+      authDomain: "tebak-gambar-341ab.firebaseapp.com",
+      projectId: "tebak-gambar-341ab",
+      storageBucket: "tebak-gambar-341ab.firebasestorage.app",
+      messagingSenderId: "25398056967",
+      appId: "1:25398056967:web:89822eac5419bd2a90f2a2",
+      measurementId: "G-B3WWT77X9J"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const menu = document.getElementById('menu');
+    const createSection = document.getElementById('createSection');
+    const joinSection = document.getElementById('joinSection');
+    const gameSection = document.getElementById('gameSection');
+
+    const roomCodeEl = document.getElementById('roomCode');
+    const currentRoomEl = document.getElementById('currentRoom');
+    const questionImage = document.getElementById('questionImage');
+    const resultMessage = document.getElementById('resultMessage');
+
+    const categories = {
+      hewan: [
+        {img:"https://i.ibb.co/6ZVnzdD/cat.jpg", answer:"kucing"},
+        {img:"https://i.ibb.co/Bq0ZKYZ/dog.jpg", answer:"anjing"},
+        {img:"https://i.ibb.co/M8t4P8R/elephant.jpg", answer:"gajah"},
+      ],
+      buah: [
+        {img:"https://i.ibb.co/3FgCvq1/apple.jpg", answer:"apel"},
+        {img:"https://i.ibb.co/7vx3fPn/banana.jpg", answer:"pisang"},
+        {img:"https://i.ibb.co/7RM44ff/orange.jpg", answer:"jeruk"},
+      ],
+      aktivitas: [
+        {img:"https://i.ibb.co/z4k6rt1/run.jpg", answer:"lari"},
+        {img:"https://i.ibb.co/bNmNLLB/read.jpg", answer:"membaca"},
+        {img:"https://i.ibb.co/bdn9Kcz/sleep.jpg", answer:"tidur"},
+      ]
+    };
+
+    // Navigasi menu
+    document.getElementById('createRoom').onclick = () => {
+      menu.style.display = "none";
+      createSection.style.display = "block";
+    };
+    document.getElementById('joinRoom').onclick = () => {
+      menu.style.display = "none";
+      joinSection.style.display = "block";
+    };
+
+    // Buat Room
+    document.getElementById('generateRoom').onclick = () => {
+      const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+      roomCodeEl.textContent = code;
+      set(ref(db, 'rooms/' + code), { status: "waiting" });
+    };
+
+    // Mulai Game
+    document.getElementById('startGame').onclick = () => {
+      const code = roomCodeEl.textContent;
+      const category = document.getElementById('category').value;
+      const chosen = categories[category][Math.floor(Math.random() * categories[category].length)];
+
+      set(ref(db, 'rooms/' + code), {
+        status: "playing",
+        img: chosen.img,
+        answer: chosen.answer
+      });
+
+      createSection.style.display = "none";
+      gameSection.style.display = "block";
+      currentRoomEl.textContent = code;
+      questionImage.src = chosen.img;
+    };
+
+    // Gabung Room
+    document.getElementById('joinNow').onclick = async () => {
+      const code = document.getElementById('joinCode').value.toUpperCase();
+      const roomRef = ref(db, 'rooms/' + code);
+      const snapshot = await get(roomRef);
+      if (!snapshot.exists()) {
+        alert("Room tidak ditemukan!");
+        return;
+      }
+      joinSection.style.display = "none";
+      gameSection.style.display = "block";
+      currentRoomEl.textContent = code;
+
+      onValue(roomRef, (snap) => {
+        const data = snap.val();
+        if (data && data.img) questionImage.src = data.img;
+        questionImage.dataset.answer = data.answer;
+      });
+    };
+
+    // Kirim jawaban
+    document.getElementById('submitAnswer').onclick = () => {
+      const answer = document.getElementById('answerInput').value.toLowerCase();
+      const correct = questionImage.dataset.answer?.toLowerCase();
+      if (answer === correct) {
+        resultMessage.textContent = "✅ Benar sekali!";
+        resultMessage.className = "message correct";
+      } else {
+        resultMessage.textContent = "❌ Salah, coba lagi!";
+        resultMessage.className = "message wrong";
+      }
+    };
+  </script>
+</body>
+</html>
