@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>English Fun — Tebak Gambar Multiplayer</title>
+<style>
+  :root {
+    --soft-blue: #a9c9ff;
+    --main-blue: #4b8df8;
+    --white: #ffffff;
+    --text: #2c3e50;
+    --shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+
+  body {
+    margin: 0;
+    font-family: "Poppins", sans-serif;
+    background: var(--soft-blue);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--white);
+    width: 100%;
+    padding: 14px 0;
+    box-shadow: var(--shadow);
+    text-align: center;
+    position: fixed;
+    top: 0;
+    z-index: 10;
+  }
+
+  header h1 {
+    color: var(--main-blue);
+    font-size: 22px;
+    margin: 0;
+  }
+
+  main {
+    margin-top: 100px;
+    width: 90%;
+    max-width: 450px;
+    background: var(--white);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 25px;
+    text-align: center;
+  }
+
+  h2 {
+    color: var(--main-blue);
+    margin-bottom: 8px;
+  }
+
+  input {
+    width: 90%;
+    padding: 10px;
+    margin-top: 8px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+  }
+
+  button {
+    background: var(--main-blue);
+    color: var(--white);
+    border: none;
+    padding: 10px 18px;
+    margin-top: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+  }
+
+  button:hover {
+    background: #3b7ce6;
+  }
+
+  .leaderboard {
+    margin-top: 25px;
+    text-align: left;
+  }
+
+  .leaderboard li {
+    background: #eef5ff;
+    margin: 6px 0;
+    padding: 8px 12px;
+    border-radius: 6px;
+  }
+
+  footer {
+    margin: 30px 0;
+    font-size: 13px;
+    color: #333;
+  }
+
+  .info-box {
+    background: #f0f6ff;
+    border-left: 4px solid var(--main-blue);
+    padding: 12px;
+    margin-top: 25px;
+    border-radius: 8px;
+    text-align: left;
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: #ddd;
+    margin: 25px 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎨 English Fun — Tebak Gambar Multiplayer</h1>
+</header>
+
+<main>
+  <h2>Let's Play!</h2>
+  <p>Masukkan namamu untuk mulai bermain:</p>
+
+  <input type="text" id="playerName" placeholder="Your name (Dyka)" />
+  <input type="text" id="roomCode" placeholder="Room code (optional)" />
+  <br />
+
+  <button onclick="createRoom()">Create Room</button>
+  <button onclick="joinRoom()">Join Room</button>
+
+  <div class="divider"></div>
+
+  <h2>🏆 Leaderboard</h2>
+  <ul id="leaderboardList">
+    <li>Loading...</li>
+  </ul>
+
+  <div class="divider"></div>
+
+  <div class="info-box">
+    <h3>📖 Cara Main:</h3>
+    <ul>
+      <li>Tebak gambar buah, sayur, aktivitas, atau negara dalam Bahasa Inggris.</li>
+      <li>Buat room atau gabung dengan temanmu.</li>
+      <li>Jawab dengan cepat untuk dapat poin!</li>
+    </ul>
+
+    <h3>ℹ️ Tentang Game:</h3>
+    <p>
+      English Fun adalah game edukatif yang melatih kemampuan kosakata Bahasa Inggris
+      melalui tebakan gambar. Seru dimainkan bersama teman secara online!
+    </p>
+  </div>
+</main>
+
+<footer>© 2025 English Fun Multiplayer | by Dykk</footer>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCmN39APiCXqBR6IsE28N2zeQKtcwo0j9Y",
+    authDomain: "dyksab.firebaseapp.com",
+    databaseURL: "https://dyksab-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "dyksab",
+    storageBucket: "dyksab.firebasestorage.app",
+    messagingSenderId: "877255675836",
+    appId: "1:877255675836:web:6a65a9af5796fa949065b9",
+    measurementId: "G-2KF1CH3Q4Y"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // Fungsi buat room
+  async function createRoom() {
+    const name = document.getElementById("playerName").value.trim();
+    if (!name) return alert("Masukkan nama terlebih dahulu!");
+    const code = Math.random().toString(36).substring(2, 7).toUpperCase();
+
+    await set(ref(db, "rooms/" + code), {
+      host: name,
+      players: { [name]: 0 },
+      createdAt: Date.now()
+    });
+
+    alert(`✅ Room berhasil dibuat!\nKode: ${code}`);
+  }
+
+  // Fungsi join room
+  async function joinRoom() {
+    const name = document.getElementById("playerName").value.trim();
+    const code = document.getElementById("roomCode").value.trim().toUpperCase();
+    if (!name || !code) return alert("Masukkan nama dan kode room!");
+
+    const roomRef = ref(db, "rooms/" + code + "/players/" + name);
+    await set(roomRef, 0);
+
+    alert(`🎮 Kamu bergabung di room ${code} sebagai ${name}`);
+  }
+
+  // Leaderboard realtime
+  const leaderboardRef = ref(db, "leaderboard");
+  onValue(leaderboardRef, (snapshot) => {
+    const data = snapshot.val();
+    const list = document.getElementById("leaderboardList");
+    if (!data) {
+      list.innerHTML = "<li>Belum ada data</li>";
+      return;
+    }
+    list.innerHTML = Object.entries(data)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, score]) => `<li><strong>${name}</strong>: ${score} pts</li>`)
+      .join("");
+  });
+</script>
+</body>
+</html>
