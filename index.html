@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>English Fun — Tebak Gambar Multiplayer</title>
+  <style>
+    :root{
+      --soft-blue:#cfe7ff;
+      --blue:#4b8df8;
+      --muted:#334155;
+      --card:#fff;
+      --radius:14px;
+      --shadow: 0 8px 30px rgba(2,6,23,0.06);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;font-family:Poppins,system-ui,Segoe UI,Roboto,Arial;
+      background:linear-gradient(180deg,var(--soft-blue),#f8fbff);
+      color:var(--muted);
+      display:flex;flex-direction:column;align-items:center;min-height:100vh;
+    }
+    header{
+      width:100%;background:var(--card);box-shadow:var(--shadow);position:fixed;top:0;z-index:20;
+      padding:18px 12px;text-align:center;border-bottom-left-radius:12px;border-bottom-right-radius:12px;
+    }
+    header h1{margin:0;color:var(--blue);font-size:20px;font-weight:700}
+    main{width:92%;max-width:720px;margin-top:94px;padding:20px}
+    .card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:18px}
+    .center{display:flex;justify-content:center;align-items:center}
+    label{display:block;margin-top:10px;font-size:14px;color:#556}
+    input[type="text"], select, textarea{
+      width:100%;padding:10px;border-radius:10px;border:1px solid #e6eef8;margin-top:8px;font-size:15px;
+    }
+    button{
+      background:var(--blue);color:white;border:0;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;
+    }
+    button.ghost{background:transparent;color:var(--blue);border:1px solid rgba(75,141,248,0.14)}
+    .row{display:flex;gap:10px}
+    .small{font-size:13px;color:#6b7280}
+    .badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#e8f1ff;color:var(--blue);font-weight:700}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .grid img{width:100%;height:90px;object-fit:cover;border-radius:8px;cursor:pointer;border:3px solid transparent}
+    .grid img.selected{border-color:var(--blue)}
+    #chat{max-height:160px;overflow:auto;padding:8px;background:#f7fbff;border-radius:8px;margin-top:8px}
+    .player{display:flex;justify-content:space-between;padding:8px;border-radius:8px;background:#f8fafc;margin-top:8px}
+    .muted{color:#64748b;font-size:13px}
+    footer{margin:20px;color:#94a3b8;font-size:13px;text-align:center}
+    @media(max-width:520px){ .grid img{height:70px} }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎨 English Fun — Tebak Gambar Multiplayer</h1>
+  </header>
+
+  <main>
+    <!-- LAYOUT -->
+    <div class="card" id="lobbyCard">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="small">Multiplayer • Category: choose when creating room</div>
+          <h2 style="margin:6px 0 0 0;color:var(--blue)">Let's Play!</h2>
+        </div>
+        <div class="center">
+          <div style="text-align:center">
+            <div class="badge" id="onlineCount">0 rooms</div>
+            <div class="small" style="margin-top:6px">Open on multiple devices to test</div>
+          </div>
+        </div>
+      </div>
+
+      <hr style="margin:14px 0;border:none;border-top:1px solid #eef6ff">
+
+      <!-- Input -->
+      <label>Nama pemain</label>
+      <input id="playerName" type="text" placeholder="Your name (Dykaa)" />
+
+      <div style="display:flex;gap:10px;margin-top:10px;align-items:flex-end">
+        <div style="flex:1">
+          <label>Kode room</label>
+          <input id="roomInput" type="text" placeholder="Enter room code or leave blank to create" />
+        </div>
+
+        <div style="width:160px">
+          <label>Pilih kategori (untuk host)</label>
+          <select id="category">
+            <option value="animals">Animals</option>
+            <option value="fruits">Fruits</option>
+            <option value="vegetables">Vegetables</option>
+            <option value="activities">Activities</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button id="btnCreate">Create Room</button>
+        <button id="btnJoin" class="ghost">Join Room</button>
+        <button id="btnLeave" class="ghost" style="display:none">Leave</button>
+      </div>
+
+      <div id="roomUI" style="display:none;margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div class="small">Room</div><div style="margin-top:6px"><span id="roomBadge" class="badge">—</span></div></div>
+          <div><div class="small">Status</div><div style="margin-top:6px"><strong id="status">waiting</strong></div></div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div class="small">Clue / Chat</div>
+          <div id="chat"></div>
+
+          <label style="margin-top:10px">Kirim clue (kalau kamu joiner)</label>
+          <textarea id="clueInput" rows="2" placeholder="Type clue or hint here..."></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <select id="chooseTarget" style="flex:1"></select>
+            <button id="btnSendClue" class="ghost">Send Clue</button>
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="small">Images (click to guess) — Host will guess</div>
+            <div id="imagesGrid" class="grid" style="margin-top:8px"></div>
+          </div>
+
+          <label style="margin-top:10px">Or type guess (Host)</label>
+          <div style="display:flex;gap:8px">
+            <input id="hostGuess" type="text" placeholder="Type your guess here..." />
+            <button id="btnGuess">Guess</button>
+          </div>
+
+          <div id="result" class="small" style="margin-top:10px"></div>
+
+          <div style="margin-top:12px">
+            <div class="small">Players</div>
+            <div id="playersList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT / Leaderboard section (below on mobile) -->
+    <div class="card">
+      <h3 style="margin:0;color:var(--blue)">🏆 Leaderboard</h3>
+      <div class="small" style="margin-top:6px">Top players (global)</div>
+      <div id="globalBoard" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0;color:var(--blue)">📖 How to Play & About</h3>
+      <div class="small" style="margin-top:8px;line-height:1.5;text-align:left">
+        <strong>How to play</strong>
+        <ol style="padding-left:18px;margin:6px 0">
+          <li>Host membuat room & memilih kategori.</li>
+          <li>Joiner masuk room, memilih target dari daftar dan mengirim clue (ciri-ciri).</li>
+          <li>Host melihat clue lalu klik gambar yang menurut host jawaban benar (atau ketik jawaban).</li>
+          <li>First correct akan mendapat 1 point. Skor disimpan di leaderboard.</li>
+        </ol>
+        <strong>About</strong>
+        <p style="margin:6px 0">English Fun — game sederhana untuk belajar kosakata bahasa Inggris lewat tebakan gambar. Dibuat untuk dimainkan bersama teman secara online.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>© 2025 English Fun Multiplayer — by Dykk</footer>
+
+<!-- Firebase & App logic -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+  import {
+    getDatabase, ref, set, get, push, onValue, update, runTransaction, onDisconnect, child
+  } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+
+  // ---------- FIREBASE CONFIG (dyksab) ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyCmN39APiCXqBR6IsE28N2zeQKtcwo0j9Y",
+    authDomain: "dyksab.firebaseapp.com",
+    databaseURL: "https://dyksab-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "dyksab",
+    storageBucket: "dyksab.firebasestorage.app",
+    messagingSenderId: "877255675836",
+    appId: "1:877255675836:web:6a65a9af5796fa949065b9",
+    measurementId: "G-2KF1CH3Q4Y"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // ---------- ASSETS (image + answer) ----------
+  // Each item has id (index), img URL, and answer text (english)
+  const ASSETS = {
+    animals: [
+      {id:0,img:"https://upload.wikimedia.org/wikipedia/commons/6/6e/Golde33443.jpg",answer:"dog"},
+      {id:1,img:"https://upload.wikimedia.org/wikipedia/commons/1/12/Cat_01.jpg",answer:"cat"},
+      {id:2,img:"https://upload.wikimedia.org/wikipedia/commons/4/41/Elephant_Kenya_edit.jpg",answer:"elephant"},
+      {id:3,img:"https://upload.wikimedia.org/wikipedia/commons/9/99/Giraffe_standing.jpg",answer:"giraffe"},
+      {id:4,img:"https://upload.wikimedia.org/wikipedia/commons/5/5e/Bald_eagle_portrait.jpg",answer:"eagle"}
+    ],
+    fruits: [
+      {id:0,img:"https://upload.wikimedia.org/wikipedia/commons/1/15/Red_Apple.jpg",answer:"apple"},
+      {id:1,img:"https://upload.wikimedia.org/wikipedia/commons/c/ca/Orange-Fruit-Pieces.jpg",answer:"orange"},
+      {id:2,img:"https://upload.wikimedia.org/wikipedia/commons/8/8a/Banana-Single.jpg",answer:"banana"},
+      {id:3,img:"https://upload.wikimedia.org/wikipedia/commons/9/99/Strawberries.jpg",answer:"strawberry"},
+      {id:4,img:"https://upload.wikimedia.org/wikipedia/commons/8/8f/Kiwi_aka.jpg",answer:"kiwi"}
+    ],
+    vegetables: [
+      {id:0,img:"https://upload.wikimedia.org/wikipedia/commons/3/3e/Carrot.jpg",answer:"carrot"},
+      {id:1,img:"https://upload.wikimedia.org/wikipedia/commons/9/9c/Broccoli_DSC00842.jpg",answer:"broccoli"},
+      {id:2,img:"https://upload.wikimedia.org/wikipedia/commons/4/4c/Cucumber_and_cross_section.jpg",answer:"cucumber"},
+      {id:3,img:"https://upload.wikimedia.org/wikipedia/commons/6/6b/Tomato_je.jpg",answer:"tomato"},
+      {id:4,img:"https://upload.wikimedia.org/wikipedia/commons/1/15/Spinach_leaves.jpg",answer:"spinach"}
+    ],
+    activities: [
+      {id:0,img:"https://upload.wikimedia.org/wikipedia/commons/1/1e/Running_woman.jpg",answer:"running"},
+      {id:1,img:"https://upload.wikimedia.org/wikipedia/commons/a/a5/Swimming_girl.jpg",answer:"swimming"},
+      {id:2,img:"https://upload.wikimedia.org/wikipedia/commons/e/e4/Basketball_game.jpg",answer:"basketball"},
+      {id:3,img:"https://upload.wikimedia.org/wikipedia/commons/0/0c/Cycling_woman.jpg",answer:"cycling"},
+      {id:4,img:"https://upload.wikimedia.org/wikipedia/commons/6/6f/Playing_guitar.jpg",answer:"playing guitar"}
+    ]
+  };
+
+  // ---------- UI refs ----------
+  const playerNameIn = document.getElementById('playerName');
+  const roomInput = document.getElementById('roomInput');
+  const categorySel = document.getElementById('category');
+  const btnCreate = document.getElementById('btnCreate');
+  const btnJoin = document.getElementById('btnJoin');
+  const btnLeave = document.getElementById('btnLeave');
+  const roomUI = document.getElementById('roomUI');
+  const roomBadge = document.getElementById('roomBadge');
+  const statusEl = document.getElementById('status');
+  const chatDiv = document.getElementById('chat');
+  const chooseTarget = document.getElementById('chooseTarget');
+  const clueInput = document.getElementById('clueInput');
+  const btnSendClue = document.getElementById('btnSendClue');
+  const imagesGrid = document.getElementById('imagesGrid');
+  const hostGuessInput = document.getElementById('hostGuess');
+  const btnGuess = document.getElementById('btnGuess');
+  const resultEl = document.getElementById('result');
+  const playersList = document.getElementById('playersList');
+  const globalBoard = document.getElementById('globalBoard');
+  const onlineCount = document.getElementById('onlineCount');
+
+  // ---------- State ----------
+  let room = '';
+  let isHost = false;
+  let localPlayerKey = null; // pushed key in players list
+  let localName = '';
+  let current = null; // room current state
+  let unsubRoom = null;
+
+  // ---------- Helpers ----------
+  function makeCode(){ return Math.random().toString(36).slice(2,6).toUpperCase(); }
+  function appendChat(t){ const p=document.createElement('div'); p.textContent=t; chatDiv.appendChild(p); chatDiv.scrollTop = chatDiv.scrollHeight; }
+  function clearChildren(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+
+  function safeKey(name){ return name.replace(/\./g,'_dot_').replace(/\$/g,'_d_'); }
+
+  // ---------- Create Room ----------
+  btnCreate.addEventListener('click', async ()=>{
+    localName = (playerNameIn.value||'').trim();
+    if(!localName) return alert('Masukkan nama dulu!');
+    const code = makeCode();
+    room = code;
+    isHost = true;
+    const cat = categorySel.value;
+
+    // initialize room
+    try{
+      await set(ref(db, 'rooms/' + room), {
+        category: cat,
+        current: null,
+        messages: [`Room created by ${localName}`],
+        scores: {},
+        createdAt: Date.now()
+      });
+      enterRoomAsHost(cat);
+    }catch(e){
+      console.error(e); alert('Gagal membuat room. Cek console.');
+    }
+  });
+
+  // ---------- Join Room ----------
+  btnJoin.addEventListener('click', async ()=>{
+    localName = (playerNameIn.value||'').trim();
+    if(!localName) return alert('Masukkan nama dulu!');
+    const code = (roomInput.value||'').trim().toUpperCase();
+    if(!code) return alert('Masukkan kode room!');
+    const snap = await get(ref(db, 'rooms/' + code));
+    if(!snap.exists()) return alert('Room tidak ditemukan!');
+    room = code;
+    isHost = false;
+    enterRoomAsJoiner();
+  });
+
+  // ---------- Enter room UI ----------
+  async function enterRoomAsHost(cat){
+    roomUI.style.display = 'block';
+    roomBadge.textContent = room;
+    statusEl.textContent = 'waiting for joiners';
+    btnCreate.style.display = 'none';
+    btnJoin.style.display = 'none';
+    btnLeave.style.display = 'inline-block';
+    // add presence player entry
+    const playersRef = ref(db, `rooms/${room}/players`);
+    const newPlayerRef = push(playersRef);
+    localPlayerKey = newPlayerRef.key;
+    await set(newPlayerRef, { name: localName, role:'host', joinedAt: Date.now() });
+    try{ onDisconnect(newPlayerRef).remove(); }catch(e){}
+    // populate images for host (but host shouldn't know target)
+    populateImages(cat);
+    // subscribe room events
+    subscribeRoom();
+  }
+
+  async function enterRoomAsJoiner(){
+    roomUI.style.display = 'block';
+    roomBadge.textContent = room;
+    statusEl.textContent = 'joined';
+    btnCreate.style.display = 'none';
+    btnJoin.style.display = 'none';
+    btnLeave.style.display = 'inline-block';
+    // add presence
+    const playersRef = ref(db, `rooms/${room}/players`);
+    const newPlayerRef = push(playersRef);
+    localPlayerKey = newPlayerRef.key;
+    await set(newPlayerRef, { name: localName, role:'joiner', joinedAt: Date.now() });
+    try{ onDisconnect(newPlayerRef).remove(); }catch(e){}
+    // fill chooseTarget dropdown based on room category
+    const snap = await get(ref(db, 'rooms/' + room));
+    const cat = snap.val().category || categorySel.value;
+    fillTargetOptions(cat);
+    subscribeRoom();
+  }
+
+  // ---------- Leave ----------
+  btnLeave.addEventListener('click', async ()=>{
+    if(localPlayerKey){
+      try{ await set(ref(db, `rooms/${room}/players/${localPlayerKey}`), null); }catch(e){}
+      localPlayerKey = null;
+    }
+    if(unsubRoom){ /* no-op because onValue returns unsubscribe? using v12 onValue returns unsubscribe function if assigned */ }
+    // reset UI
+    roomUI.style.display = 'none';
+    btnCreate.style.display = 'inline-block';
+    btnJoin.style.display = 'inline-block';
+    playersList.innerHTML = '';
+    chatDiv.innerHTML = '';
+    imagesGrid.innerHTML = '';
+    resultEl.textContent = '';
+    roomBadge.textContent = '—';
+    room = '';
+    isHost = false;
+  });
+
+  // ---------- Fill target options for joiner ----------
+  function fillTargetOptions(cat){
+    clearChildren(chooseTarget);
+    const arr = ASSETS[cat] || [];
+    arr.forEach(item=>{
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = item.answer;
+      chooseTarget.appendChild(opt);
+    });
+  }
+
+  // ---------- Populate images grid ----------
+  function populateImages(cat){
+    clearChildren(imagesGrid);
+    const arr = ASSETS[cat] || [];
+    arr.forEach(item=>{
+      const img = document.createElement('img');
+      img.src = item.img;
+      img.dataset.id = item.id;
+      img.title = item.answer;
+      img.addEventListener('click', ()=> onImageClick(item.id));
+      imagesGrid.appendChild(img);
+    });
+  }
+
+  // ---------- Joiner sends clue (and sets target) ----------
+  btnSendClue.addEventListener('click', async ()=>{
+    if(!room) return alert('Join a room first');
+    const clue = (clueInput.value||'').trim();
+    const targetId = chooseTarget.value;
+    if(!clue) return alert('Type a clue first');
+    if(targetId==='' || targetId===undefined) return alert('Choose a target item (from dropdown)');
+    // Update room current: targetId and clue
+    const roomRef = ref(db, 'rooms/' + room);
+    const snap = await get(roomRef);
+    const data = snap.exists()?snap.val():{};
+    const msgs = data.messages || [];
+    msgs.push(`${localName} (clue): ${clue}`);
+    await update(roomRef, {
+      current: { targetId: Number(targetId), clue: clue, by: localName, ts: Date.now() },
+      messages: msgs,
+      winner: null
+    });
+    clueInput.value = '';
+    appendChat(`You sent clue: ${clue}`);
+  });
+
+  // ---------- When host clicks an image to guess ----------
+  async function onImageClick(id){
+    if(!room) return;
+    if(!isHost) return alert('Only host can guess by clicking images');
+    // fetch room and current target
+    const roomRef = ref(db, 'rooms/' + room);
+    const snap = await get(roomRef); if(!snap.exists()) return;
+    const data = snap.val();
+    const current = data.current;
+    if(!current){ alert('No clue yet. Wait for joiner to send clue.'); return; }
+    const targetId = current.targetId;
+    const guessCorrect = Number(id) === Number(targetId);
+    if(guessCorrect){
+      // try to set winner atomically and update scores
+      const winnerRef = ref(db, `rooms/${room}/winner`);
+      try{
+        await runTransaction(winnerRef, (cur)=>{
+          if(cur===null) return { name: localName, answerId: id, ts: Date.now() };
+          return cur;
+        });
+        // increment room score
+        await runTransaction(ref(db, `rooms/${room}/scores/${safeKey(localName)}`), (v)=>(v||0)+1);
+        // increment global
+        await runTransaction(ref(db, `global/${safeKey(localName)}`), (v)=> ({ score: (v && v.score? v.score:0)+1, last: Date.now() }));
+        resultEl.textContent = `✅ Correct! You found it.`;
+      }catch(e){ console.error(e); }
+    } else {
+      resultEl.textContent = `❌ Not correct. Try again.`;
+    }
+  }
+// ---------- Host types guess ----------
+  btnGuess.addEventListener('click', async ()=>{
+    if(!room) return;
+    if(!isHost) return alert('Only host can guess');
+    const guess = (hostGuessInput.value||'').trim().toLowerCase();
+    if(!guess) return;
+    const snap = await get(ref(db, 'rooms/' + room));
+    if(!snap.exists()) return;
+    const data = snap.val();
+    const current = data.current;
+    if(!current) return alert('No clue set yet.');
+    const target = ASSETS[data.category][current.targetId];
+    if(!target) return;
+    if(guess === String(target.answer).toLowerCase()){
+      // set winner via transaction (first only)
+      const winnerRef = ref(db, `rooms/${room}/winner`);
+      try{
+        await runTransaction(winnerRef, (cur)=>{
+          if(cur===null) return { name: localName, answer: target.answer, ts: Date.now() };
+          return cur;
+        });
+        await runTransaction(ref(db, `rooms/${room}/scores/${safeKey(localName)}`), (v)=>(v||0)+1);
+        await runTransaction(ref(db, `global/${safeKey(localName)}`), (v)=> ({ score: (v && v.score? v.score:0)+1, last: Date.now() }));
+        resultEl.textContent = `✅ Correct! "${target.answer}" — point awarded.`;
+      }catch(e){ console.error(e); }
+    } else {
+      resultEl.textContent = `❌ Wrong guess. Try another.`;
+    }
+    hostGuessInput.value = '';
+  });
+
+  // ---------- Subscribe to room updates ----------
+  function subscribeRoom(){
+    const roomRef = ref(db, 'rooms/' + room);
+    // onValue returns an unsubscribe function; store it
+    if(typeof unsubRoom === 'function') unsubRoom();
+    unsubRoom = onValue(roomRef, (snap)=>{
+      const data = snap.val();
+      if(!data) return;
+      // messages
+      chatDiv.innerHTML = '';
+      (data.messages || []).forEach(m=> appendChat(m));
+      // players
+      playersList.innerHTML = '';
+      const pls = data.players || {};
+      Object.entries(pls).forEach(([k,p])=>{
+        const el = document.createElement('div'); el.className='player';
+        el.innerHTML = `<div>${p.name} ${p.role? '('+p.role+')':''}</div><div class="small">${p.joinedAt?new Date(p.joinedAt).toLocaleTimeString():""}</div>`;
+        playersList.appendChild(el);
+      });
+      // scores in room
+      const scores = data.scores || {};
+      // update scoreboard area (top right)
+      const sb = document.getElementById('globalBoard'); sb.innerHTML = '';
+      const global = data.scores?Object.entries(data.scores).sort((a,b)=>b[1]-a[1]):[];
+      global.forEach(([n,s])=>{ const d=document.createElement('div'); d.textContent=`${n}: ${s}`; sb.appendChild(d); });
+
+      // current clue handling
+      current = data.current || null;
+      if(current){
+        appendChat(`Clue from ${current.by}: ${current.clue}`);
+        // if host, show images from category (guesser)
+        if(isHost){
+          populateImages(data.category);
+        }
+      }
+      // winner
+      if(data.winner){
+        appendChat(`🏆 Winner: ${data.winner.name} — answer: ${data.winner.answer || data.winner.answerId}`);
+      }
+    });
+  }
+
+  // ---------- Global leaderboard subscribe ----------
+  onValue(ref(db, 'global'), (snap)=>{
+    const g = snap.val() || {};
+    globalBoard.innerHTML = '';
+    const entries = Object.entries(g).sort((a,b)=> (b[1].score||0) - (a[1].score||0));
+    if(entries.length===0){
+      globalBoard.innerHTML = '<div class="small">Belum ada data</div>';
+      onlineCount.textContent = '0 rooms';
+      return;
+    }
+    entries.slice(0,10).forEach(([k,obj])=>{
+      const name = k.replace(/_dot_/g,'.');
+      const div = document.createElement('div'); div.textContent = `${name}: ${obj.score||0}`;
+      globalBoard.appendChild(div);
+    });
+    // show rooms count (rough): use rooms node length
+    get(ref(db, 'rooms')).then(snap=> {
+      const roomsObj = snap.exists()?snap.val():{};
+      onlineCount.textContent = Object.keys(roomsObj).length + ' rooms';
+    });
+  });
+
+  // ---------- initial small UX ----------
+  try{ const n = localStorage.getItem('ef_name'); if(n) playerNameIn.value = n; }catch(e){}
+  playerNameIn.addEventListener('blur', ()=> localStorage.setItem('ef_name', playerNameIn.value||''));
+
+  // fill chooseTarget default when category changed (if joiner open)
+  categorySel.addEventListener('change', ()=> {
+    if(room && !isHost){
+      fillTargetOptions(categorySel.value);
+    }
+  });
+
+  // populate chooseTarget with default category initially
+  (function initChoose(){ fillTargetOptions(categorySel.value); })();
+
+</script>
+</body>
+</html>
+
