@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>English Fun — Guess the Picture (Multiplayer)</title>
+<meta name="description" content="English Fun - multiplayer guess the picture game" />
+<style>
+  :root{
+    --bg1: linear-gradient(180deg,#f6f8ff,#eef2ff);
+    --card:#fff;
+    --primary:#4f46e5;
+    --accent:#6366f1;
+    --muted:#64748b;
+    --ok:#16a34a;
+    --bad:#ef4444;
+    --radius:12px;
+    --shadow:0 10px 30px rgba(2,6,23,0.06);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+    min-height:100vh;background:var(--bg1);color:#0f172a;
+    display:flex;flex-direction:column;align-items:center;padding:20px;
+  }
+  header{width:100%;max-width:1100px;text-align:center;margin-bottom:14px}
+  h1{margin:0;color:var(--accent);font-size:20px}
+  p.lead{margin:6px 0 0;color:var(--muted);font-size:13px}
+  .wrap{width:100%;max-width:1100px;display:grid;grid-template-columns:1fr 380px;gap:16px}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}}
+  .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);border:1px solid rgba(15,23,42,0.03)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn{background:var(--primary);color:#fff;border:0;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+  .btn.alt{background:transparent;color:var(--accent);border:1px solid rgba(99,102,241,0.12)}
+  label{display:block;margin-top:10px;color:var(--muted);font-size:13px}
+  input,select{width:100%;padding:10px;border-radius:10px;border:1px solid #e6eef8;margin-top:8px;font-size:15px}
+  .imgwrap{display:flex;align-items:center;justify-content:center;min-height:220px;margin-top:12px}
+  img.q{max-width:100%;border-radius:10px;box-shadow:0 8px 18px rgba(2,6,23,0.06)}
+  .players{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .player{padding:8px;border-radius:8px;background:rgba(15,23,42,0.02);display:flex;justify-content:space-between}
+  .muted{color:var(--muted);font-size:13px}
+  .result{margin-top:10px;font-weight:700}
+  .result.ok{color:var(--ok)}
+  .result.bad{color:var(--bad)}
+  .badge{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(99,102,241,0.12);color:var(--accent);font-weight:700}
+  footer{margin-top:18px;color:var(--muted);font-size:13px}
+  .tiny{font-size:12px;color:var(--muted)}
+  .center{display:flex;align-items:center;justify-content:center}
+  code.k{background:#f1f5f9;padding:2px 6px;border-radius:6px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>English Fun — Guess the Picture</h1>
+  <p class="lead">Private room multiplayer — Host chooses picture, others guess in English.</p>
+</header>
+
+<main class="wrap">
+  <section class="card">
+    <div id="menu">
+      <div class="row">
+        <button id="btnCreate" class="btn">Create Room</button>
+        <button id="btnJoin" class="btn alt">Join Room</button>
+      </div>
+      <div class="tiny muted" style="margin-top:8px">Host shares the room code (or link with <code class="k">#room=CODE</code>) with friends.</div>
+    </div>
+
+    <!-- create -->
+    <div id="create" style="display:none;margin-top:12px">
+      <label>Host name (optional)</label>
+      <input id="hostName" placeholder="Host name (e.g. Anna)"/>
+      <label>Category</label>
+      <select id="category">
+        <option value="animals">Animals</option>
+        <option value="fruits">Fruits</option>
+        <option value="activities">Activities</option>
+      </select>
+
+      <div class="row" style="margin-top:12px">
+        <button id="gen" class="btn alt">Generate Code</button>
+        <button id="cancelCreate" class="btn alt">Cancel</button>
+      </div>
+
+      <div id="created" style="display:none;margin-top:12px">
+        <div class="muted">Room code</div>
+        <div style="margin-top:6px"><span id="roomCode" class="badge">----</span></div>
+        <div class="row" style="margin-top:10px">
+          <button id="start" class="btn">Start Game</button>
+          <button id="share" class="btn alt">Copy Link</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- join -->
+    <div id="join" style="display:none;margin-top:12px">
+      <label>Your name</label>
+      <input id="playerName" placeholder="Your name (e.g. Ben)"/>
+      <label>Room code</label>
+      <input id="joinCode" placeholder="AB12"/>
+      <div class="row" style="margin-top:10px">
+        <button id="doJoin" class="btn">Join</button>
+        <button id="cancelJoin" class="btn alt">Cancel</button>
+      </div>
+    </div>
+
+    <!-- game -->
+    <div id="game" style="display:none;margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div class="muted">Room</div><div style="margin-top:6px"><span id="roomBadge" class="badge">-</span></div></div>
+        <div><div class="muted">Status</div><div style="margin-top:6px"><strong id="status">—</strong></div></div>
+      </div>
+
+      <div class="imgwrap"><img id="imgQ" class="q" src="" alt="question image"/></div>
+
+      <label style="margin-top:10px">Your guess</label>
+      <input id="guess" placeholder="Type your answer in English..."/>
+      <div class="row" style="margin-top:10px">
+        <button id="send" class="btn">Send</button>
+        <button id="next" class="btn alt" style="display:none">Next (Host)</button>
+        <button id="leave" class="btn alt">Leave</button>
+      </div>
+
+      <div id="result" class="result"></div>
+
+      <div style="margin-top:12px" class="muted">Players in room:</div>
+      <div id="players" class="players"></div>
+    </div>
+  </section>
+
+  <aside class="card">
+    <h3 style="margin:0">How to use</h3>
+    <ol class="tiny" style="margin-top:8px">
+      <li>Create room → copy link or code → share to friends.</li>
+      <li>Friends open link → Join room → enter name → wait for host to start.</li>
+      <li>Host presses Next to go to next picture. First correct guess wins the round.</li>
+    </ol>
+
+    <hr style="margin:12px 0;border:none;border-top:1px solid rgba(15,23,42,0.04)">
+
+    <h4 style="margin:0">Images included</h4>
+    <ul class="tiny muted" style="margin-top:8px;padding-left:18px">
+      <li>Animals: cat, dog, elephant</li>
+      <li>Fruits: apple, banana, orange</li>
+      <li>Activities: run, read, sleep</li>
+    </ul>
+
+    <hr style="margin:12px 0;border:none;border-top:1px solid rgba(15,23,42,0.04)">
+
+    <div class="tiny muted">
+      <strong>Security note:</strong> For **testing only** you may place your Ably API key into this file (variable ABLY_API_KEY below).  
+      <em>Do not publish this HTML with the key to public repos or public hosting</em>. For production, use token auth (server).
+    </div>
+  </aside>
+</main>
+
+<footer>© 2025 English Fun — Guess the Picture</footer>
+
+<!-- Ably client -->
+<script src="https://cdn.ably.io/lib/ably.min-1.js"></script>
+
+<script>
+/* ----------------------
+   CONFIG — REPLACE FOR TESTING ONLY
+   ----------------------
+   For quick test: put your Ably API key here (format: key:secret).
+   WARNING: if you publish this file publicly, revoke this key immediately.
+   For production use a token-auth server (example below).
+*/
+const ABLY_API_KEY = "6T76hQ.dMVe8A:Mum8hf8TcOFRxm6DPz6TjKqH7HqwewUj-5EjrcPItGQ"; // <--- REPLACE FOR TESTING ONLY
+
+/* ----------------------
+   ASSETS (images + answers)
+   ---------------------- */
+const ASSETS = {
+  animals: [
+    { img: "https://i.ibb.co/6ZVnzdD/cat.jpg", answer: "cat" },
+    { img: "https://i.ibb.co/Bq0ZKYZ/dog.jpg", answer: "dog" },
+    { img: "https://i.ibb.co/M8t4P8R/elephant.jpg", answer: "elephant" }
+  ],
+  fruits: [
+    { img: "https://i.ibb.co/3FgCvq1/apple.jpg", answer: "apple" },
+    { img: "https://i.ibb.co/7vx3fPn/banana.jpg", answer: "banana" },
+    { img: "https://i.ibb.co/7RM44ff/orange.jpg", answer: "orange" }
+  ],
+  activities: [
+    { img: "https://i.ibb.co/z4k6rt1/run.jpg", answer: "run" },
+    { img: "https://i.ibb.co/bNmNLLB/read.jpg", answer: "read" },
+    { img: "https://i.ibb.co/bdn9Kcz/sleep.jpg", answer: "sleep" }
+  ]
+};
+
+/* ----------------------
+   Helpers & UI refs
+   ---------------------- */
+const $ = id => document.getElementById(id);
+
+/* menu UI */
+const btnCreate = $('btnCreate'), btnJoin = $('btnJoin');
+const create = $('create'), join = $('join'), menu = $('menu');
+const gen = $('gen'), cancelCreate = $('cancelCreate'), created = $('created'), roomCodeEl = $('roomCode');
+const startBtn = $('start'), shareBtn = $('share');
+const playerNameIn = $('playerName'), joinCodeIn = $('joinCode'), doJoin = $('doJoin'), cancelJoin = $('cancelJoin');
+const game = $('game'), roomBadge = $('roomBadge'), statusEl = $('status'), imgQ = $('imgQ');
+const guessIn = $('guess'), sendBtn = $('send'), nextBtn = $('next'), leaveBtn = $('leave');
+const resultEl = $('result'), playersDiv = $('players'), hostNameEl = $('hostName'), categoryEl = $('category');
+
+/* state */
+let ably = null, channel = null, room = null, isHost = false, localName = null, currentAnswer = null;
+let players = {}; // clientId -> name
+let winnerState = null; // {name, ts}
+
+/* Ably helper */
+function ensureAbly() {
+  if (ably) return ably;
+  if (!ABLY_API_KEY || ABLY_API_KEY.includes('YOUR_')) {
+    alert('Please set ABLY_API_KEY in the file for quick testing, or use token auth server.');
+    throw new Error('Ably API key missing');
+  }
+  ably = new Ably.Realtime.Promise({ key: ABLY_API_KEY });
+  return ably;
+}
+
+/* generate code */
+function genCode() { return Math.random().toString(36).slice(2,6).toUpperCase(); }
+
+/* UI navigation */
+btnCreate.onclick = () => { menu.style.display='none'; join.style.display='none'; create.style.display='block'; created.style.display='none'; roomCodeEl.textContent='----'; };
+btnJoin.onclick = () => { menu.style.display='none'; create.style.display='none'; join.style.display='block'; };
+cancelCreate.onclick = () => { create.style.display='none'; menu.style.display='block'; };
+cancelJoin.onclick = () => { join.style.display='none'; menu.style.display='block'; };
+
+gen.onclick = () => {
+  const code = genCode();
+  roomCodeEl.textContent = code;
+  created.style.display = 'block';
+};
+
+/* share link */
+if (shareBtn) shareBtn.onclick = () => {
+  const code = roomCodeEl.textContent;
+  const link = location.href.split('#')[0] + '#room=' + code;
+  navigator.clipboard?.writeText(`Room: ${code}\n${link}`).then(()=>alert('Link & code copied to clipboard'));
+};
+
+/* Host start */
+startBtn.onclick = async () => {
+  const code = roomCodeEl.textContent;
+  if(!code || code==='----') return alert('Generate room code first');
+  localName = hostNameEl.value || 'Host';
+  isHost = true;
+  room = code;
+  ensureAbly();
+  channel = ably.channels.get('englishfun-'+room);
+  await channel.attach();
+
+  // chosen image
+  const cat = categoryEl.value;
+  const chosen = ASSETS[cat][Math.floor(Math.random()*ASSETS[cat].length)];
+  currentAnswer = chosen.answer.toLowerCase();
+  winnerState = null;
+  players = {};
+
+  // publish initial metadata and image
+  await channel.publish('meta', {host: localName, status:'playing'});
+  await channel.publish('img', {img: chosen.img, answerLen: chosen.answer.length});
+
+  // presence: host enters presence with name
+  await channel.presence.enter({ name: localName });
+
+  subscribeChannel();
+  enterGameUI();
+};
+
+/* Join */
+doJoin.onclick = async () => {
+  const code = (joinCodeIn.value||'').trim().toUpperCase();
+  if(!code) return alert('Enter room code');
+  localName = playerNameIn.value || ('P' + Math.floor(Math.random()*900+100));
+  isHost = false;
+  room = code;
+  ensureAbly();
+  channel = ably.channels.get('englishfun-'+room);
+  await channel.attach();
+
+  // presence enter
+  await channel.presence.enter({ name: localName });
+
+  subscribeChannel();
+  enterGameUI();
+};
+
+/* Subscribe to channel events & presence */
+function subscribeChannel(){
+  if(!channel) return;
+  // image messages
+  channel.subscribe('img', (msg) => {
+    if(msg.data && msg.data.img) {
+      imgQ.src = msg.data.img;
+      resultEl.textContent = '';
+      currentAnswer = msg.data.answer ? msg.data.answer.toLowerCase() : null;
+      winnerState = null;
+    }
+  });
+
+  // meta (status)
+  channel.subscribe('meta', (msg) => {
+    if(msg.data && msg.data.status) statusEl.textContent = msg.data.status;
+  });
+
+  // guesses
+  channel.subscribe('guess', (msg) => {
+    const d = msg.data;
+    if(!d) return;
+    // register player in list
+    players[d.clientId || d.name || Math.random()] = d.name || 'Guest';
+    renderPlayers();
+
+    // if guess matches and no winner, publish winner (this may be done by multiple clients; we'll resolve by earliest ts)
+    if(currentAnswer && d.text && d.text.toLowerCase() === currentAnswer) {
+      // publish winner event with ts from sender
+      channel.publish('winner', { name: d.name, text: d.text, ts: d.ts || Date.now() });
+    }
+  });
+
+  // winner — accept earliest ts as winner
+  channel.subscribe('winner', (msg) => {
+    const w = msg.data;
+    if(!w) return;
+    if(!winnerState || (w.ts && w.ts < winnerState.ts)) {
+      winnerState = { name: w.name, ts: w.ts, text: w.text };
+      resultEl.textContent = `🏆 Winner: ${winnerState.name} — "${winnerState.text}"`;
+      resultEl.className = 'result ok';
+      // show Next button only to host
+      nextBtn.style.display = isHost ? 'inline-block' : 'none';
+    }
+  });
+
+  // presence updates -> build players list
+  channel.presence.subscribe(() => {
+    channel.presence.get((err, members) => {
+      if(err) return;
+      players = {};
+      members.forEach(m => { players[m.clientId || m.id] = (m.data && m.data.name) ? m.data.name : m.id; });
+      renderPlayers();
+    });
+  });
+
+  // fetch initial presence
+  channel.presence.get((err, members) => {
+    if(!err) members.forEach(m => { players[m.clientId || m.id] = (m.data && m.data.name) ? m.data.name : m.id; });
+    renderPlayers();
+  });
+}
+
+function renderPlayers(){
+  playersDiv.innerHTML = '';
+  const keys = Object.keys(players);
+  if(keys.length===0){ playersDiv.innerHTML = '<div class="muted tiny">No players yet</div>'; return; }
+  keys.forEach(k => {
+    const el = document.createElement('div'); el.className='player'; el.textContent = players[k];
+    playersDiv.appendChild(el);
+  });
+}
+
+/* Enter game UI */
+function enterGameUI(){
+  menu.style.display='none';
+  create.style.display='none';
+  join.style.display='none';
+  game.style.display='block';
+  roomBadge.textContent = room;
+  statusEl.textContent = 'playing';
+  nextBtn.style.display = isHost ? 'inline-block' : 'none';
+}
+
+/* Send guess */
+sendBtn.onclick = async () => {
+  if(!channel) return alert('Not in room');
+  const text = (guessIn.value||'').trim();
+  if(!text) return;
+  const ts = Date.now();
+  // publish guess
+  await channel.publish('guess', { name: localName, text, clientId: ably.connection.details.clientId, ts });
+  // optimistic UI
+  resultEl.textContent = `You: ${text}`;
+  guessIn.value = '';
+};
+
+/* Host next: new image */
+nextBtn.onclick = async () => {
+  if(!isHost || !channel) return;
+  const cat = categoryEl.value;
+  const chosen = ASSETS[cat][Math.floor(Math.random()*ASSETS[cat].length)];
+  currentAnswer = chosen.answer.toLowerCase();
+  winnerState = null;
+  await channel.publish('img', { img: chosen.img, answer: chosen.answer, answerLen: chosen.answer.length });
+  await channel.publish('meta', { status:'playing' });
+  resultEl.textContent = '';
+};
+
+/* Leave */
+leaveBtn.onclick = async () => {
+  if(channel){
+    try { await channel.presence.leave(); } catch(e){}
+    try { channel.unsubscribe(); } catch(e){}
+    try { channel.detach(); } catch(e){}
+  }
+  location.reload();
+};
+
+/* Auto join from link #room=CODE */
+(function autoJoin(){
+  const h = location.hash;
+  if(h && h.startsWith('#room=')){
+    btnJoin.click();
+    const code = h.replace('#room=','').toUpperCase();
+    joinCodeIn.value = code;
+  }
+})();
+
+/* allow enter to send guess */
+guessIn.addEventListener('keydown', e => { if(e.key==='Enter') sendBtn.click(); });
+joinCodeIn.addEventListener('keydown', e => { if(e.key==='Enter') doJoin.click(); });
+hostNameEl && hostNameEl.addEventListener('keydown', e => { if(e.key==='Enter') gen.click(); });
+
+</script>
+</body>
+</html>
